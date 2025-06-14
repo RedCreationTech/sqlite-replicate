@@ -36,7 +36,30 @@ clojure -m myapp.db
 ```
 执行后会生成 `app-data.db` 并打印插入与查询结果。
 
-## 4. 配置 Litestream
+## 4. 启动 HTTP 服务并持续写入数据库
+
+项目还提供了 `myapp.service`，启动后会在 `3000` 端口暴露 `/health` 接口，并每秒向 `events` 表写入当前时间戳。
+
+```bash
+clojure -M:service
+```
+
+访问 <http://localhost:3000/health> 可得到 `OK`，同时可在数据库中看到不断新增的记录。
+
+### 单机运行两个服务与一个 MinIO
+
+若要在单机测试多实例，可复制项目目录两份，例如 `instance-a/` 与 `instance-b/`，分别启动 Litestream 和 `myapp.service`，但共用同一 MinIO。
+
+在各自的 `litestream.yml` 中修改 `dbs.[0].path` 指向对应实例的数据库文件，并将 `path` 字段区分开，例如 `database/a`、`database/b`。随后分别执行：
+
+```powershell
+litestream replicate C:\path\to\instance-a\litestream.yml
+litestream replicate C:\path\to\instance-b\litestream.yml
+```
+
+这样即可在一台机器上验证两个服务写入同一个 MinIO 的情况。
+
+## 5. 配置 Litestream
 创建 `C:\Litestream\litestream.yml`（路径可自定义）：
 ```yaml
 access-key-id: minioadmin
@@ -56,7 +79,7 @@ dbs:
 ```
 将 `path` 改为项目中数据库文件的绝对路径。修改配置后重启 *Litestream* 服务即可开始复制。
 
-## 5. 验证与恢复
+## 6. 验证与恢复
 1. 运行 Clojure 程序向数据库写入数据。
 2. 打开 MinIO 控制台，可看到 `database/` 目录下出现 `generations`、`snapshots` 等子目录，说明复制成功。
 3. 若需要恢复，可在项目目录执行：
@@ -65,7 +88,7 @@ dbs:
    ```
    然后重新运行程序查看数据是否完整。
 
-## 6. 让 MinIO 持久运行（可选）
+## 7. 让 MinIO 持久运行（可选）
 创建 `start-minio.bat`：
 ```bat
 @ECHO OFF
@@ -73,7 +96,7 @@ C:\minio\minio.exe server C:\minio-data --console-address ":9001"
 ```
 通过“任务计划程序”设置该批处理在系统启动时执行，即可在后台常驻运行。
 
-## 7. 在另一台电脑测试
+## 8. 在另一台电脑测试
 如果想在另一台机器上验证备份数据，可按下列步骤操作：
 
 1. 在第二台机器同样安装 Clojure、Litestream 以及相同的 Java 环境。
