@@ -23,7 +23,7 @@
   []
   (with-open [conn (jdbc/get-connection ds)]
     (set-pragmas! conn)
-    (jdbc/execute! conn ["CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, email TEXT);"]))
+    (jdbc/execute! conn ["CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, email TEXT);"])))
 
 (defn add-user!
   "Insert a user map." [user-map]
