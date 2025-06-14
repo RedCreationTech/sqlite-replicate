@@ -3,5 +3,6 @@
         com.github.seancorfield/next.jdbc {:mvn/version "1.3.925"}
        org.xerial/sqlite-jdbc {:mvn/version "3.46.0.0"}
        http-kit/http-kit {:mvn/version "2.7.0"}}
- :aliases {:run {:main-opts ["-m" "myapp.db"]}
-           :service {:main-opts ["-m" "myapp.service"]}}}
+  :aliases {:run {:main-opts ["-m" "myapp.db"]}
+            :service {:main-opts ["-m" "myapp.service"]}
+            :standby {:main-opts ["-m" "myapp.standby"]}}}
