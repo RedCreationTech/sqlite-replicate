@@ -11,8 +11,8 @@
    :body "OK"})
 
 (defn start-server []
-  (reset! server (http/run-server #'health-handler {:port 3000}))
-  (println "HTTP server started on port 3000"))
+  (reset! server (http/run-server #'health-handler {:port 3001}))
+  (println "HTTP server started on port 3001"))
 
 (defn stop-server []
   (when-let [stop-fn @server]

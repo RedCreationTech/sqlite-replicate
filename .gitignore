@@ -1,0 +1,7 @@
+/.clj-kondo/
+/.cpcache/
+/.lsp/
+/.nrepl-port
+/app-data.db
+/app-data.db-shm
+/app-data.db-wal
