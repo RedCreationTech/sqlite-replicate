@@ -114,6 +114,19 @@ C:\minio\minio.exe server C:\minio-data --console-address ":9001"
 6. 查看控制台输出和本地数据库内容，确认数据与主机一致。
 7. 如需持续同步，可在第二台机也启动 Litestream 服务，指向同一 MinIO 存储。
 
+## 9. 自动故障转移示例
+
+项目新增了 `myapp.standby`，用于在候选节点上定期检查主节点是否存活。如果检测到
+`http://localhost:3001/health` 无响应，将自动执行 `litestream restore` 恢复数
+据并启动本地服务接管。
+
+```bash
+clojure -M:standby
+```
+
+启动后程序会每 5 秒轮询一次主节点，一旦发现故障便会拉起自己的 HTTP 服务和写入任
+务。
+
 ## 工作原理与热备场景
 
 在生产环境中可以将 MinIO 部署为共享服务，或在每台主机上独立运行。本项目采用后者，即每台主机都拥有自己的 MinIO 实例，并通过交叉复制实现热备。
