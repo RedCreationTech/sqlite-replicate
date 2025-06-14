@@ -23,7 +23,8 @@
   []
   (with-open [conn (jdbc/get-connection ds)]
     (set-pragmas! conn)
-    (jdbc/execute! conn ["CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, email TEXT);"])))
+    (jdbc/execute! conn ["CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, email TEXT);"])
+    (jdbc/execute! conn ["CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY AUTOINCREMENT, ts INTEGER);"]))
 
 (defn add-user!
   "Insert a user map." [user-map]
@@ -31,12 +32,21 @@
     (set-pragmas! conn)
     (sql/insert! conn :users user-map)))
 
+(defn add-event!
+  "Insert a timestamp event."
+  [ts]
+  (with-open [conn (jdbc/get-connection ds)]
+    (set-pragmas! conn)
+    (sql/insert! conn :events {:ts ts})))
+
 (defn get-all-users []
   (sql/query ds ["SELECT id, name, email FROM users"]))
 
 (defn -main [& _]
   (println "Initializing database...")
   (initialize-database!)
+  (println "\nWriting an event record...")
+  (add-event! (System/currentTimeMillis))
   (println "\nAdding a new user...")
   (add-user! {:name "Alice" :email "alice@example.com"})
   (println "\nCurrent users:")
