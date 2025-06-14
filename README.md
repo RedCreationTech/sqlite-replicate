@@ -73,6 +73,24 @@ C:\minio\minio.exe server C:\minio-data --console-address ":9001"
 ```
 通过“任务计划程序”设置该批处理在系统启动时执行，即可在后台常驻运行。
 
----
-通过以上步骤即可在本地搭建一个基于 SQLite 的可靠备份方案，既适用于开发环境，也可用于小规模生产场景。
+## 7. 在另一台电脑测试
+如果想在另一台机器上验证备份数据，可按下列步骤操作：
 
+1. 在第二台机器同样安装 Clojure、Litestream 以及相同的 Java 环境。
+2. 确保第二台机器可以通过网络访问第一台主机上的 MinIO 服务。
+3. 将此项目代码拷贝到第二台机，并修改 `litestream.yml` 中的 `endpoint` 为第一台机的 IP 或域名。
+4. 在项目目录执行：
+   ```powershell
+   litestream restore -o app-data.db s3://clojure-db-replica/database
+   ```
+5. 继续执行：
+   ```powershell
+   clojure -M:run
+   ```
+   或者直接调用 `clojure -m myapp.db`。
+6. 查看控制台输出和本地数据库内容，确认数据与主机一致。
+7. 如需持续同步，可在第二台机也启动 Litestream 服务，指向同一 MinIO 存储。
+
+---
+通过以上步骤即可在本地搭建一个基于 SQLite 的可靠备份方案，既适用于开发环境，也可
+用于小规模生产场景。
