@@ -19,11 +19,14 @@
     (stop-fn)
     (reset! server nil)))
 
+(defn record-timestamp-event! []
+  (db/add-event! (System/currentTimeMillis)))
+
 (defn start-writer []
   (reset! writer
           (future
             (while true
-              (db/add-event! (System/currentTimeMillis))
+              (record-timestamp-event!)
               (Thread/sleep 1000))))
   (println "Background writer started."))
 

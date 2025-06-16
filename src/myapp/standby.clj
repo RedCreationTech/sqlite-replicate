@@ -27,12 +27,24 @@
   (println "Service running as primary. Press Ctrl+C to exit.")
   @(promise))
 
+(defn check-primary-and-failover! []
+  (if (port-active?)
+    (do
+      (println "Primary service is healthy.")
+      false) ; Returns false indicating no failover was attempted
+    (do
+      (println "Active service unreachable. Initiating failover...")
+      (if (restore-db)
+        (do
+          (start-service) ; This will block if not handled in test
+          true) ; Returns true indicating failover attempted and restore successful
+        (do
+          (println "Failover failed: Database restore was unsuccessful.")
+          false))))) ; Returns false indicating failover attempt failed
+
 (defn -main [& _]
   (println "Standby instance started. Monitoring active service...")
   (loop []
-    (if (port-active?)
-      (do (Thread/sleep 5000) (recur))
-      (do
-        (println "Active service unreachable. Initiating failover...")
-        (when (restore-db)
-          (start-service))))))
+    (when-not (check-primary-and-failover!) ; If failover didn't happen or failed
+      (Thread/sleep 5000)
+      (recur))))
