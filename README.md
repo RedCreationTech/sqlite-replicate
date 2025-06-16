@@ -280,6 +280,73 @@ Luminus 项目通常将配置存储在 `config.edn` 中，并通过 `myapp.confi
 
 通过这种方式，您可以将 SQLite 数据库的初始化、可选的健康检查服务以及 Litestream 的（间接）管理集成到 Luminus 应用的生命周期中。
 
+## 开发与部署 (Development and Deployment)
+
+本节介绍如何运行单元测试、打包项目以及将其部署到 Clojars。
+
+### 运行单元测试 (Running Unit Tests)
+
+项目包含一套单元测试，可以使用以下命令运行：
+
+```bash
+clojure -M:test
+```
+此命令会执行 `test/runner.clj` 中定义的测试运行器，它将加载并运行所有在 `myapp.*-test` 命名空间模式下的测试。请确保所有测试通过后再进行打包或部署。
+
+### 本地打包 (Local Packaging)
+
+要将此库打包为 JAR 文件以供本地使用或部署，我们使用 `depstar` 工具。`deps.edn` 文件中已配置好相关 alias。
+
+**1. 生成 `pom.xml`:**
+
+`pom.xml` 文件包含了项目的元数据，是打包和部署所必需的。它会根据 `deps.edn` 文件中的 `:pom-data` 部分自动生成。
+```bash
+clojure -X:create-pom
+```
+此命令会使用 `deps.edn` 中的 `:pom-data` (包括 `:lib` 和 `:version`) 来生成 `pom.xml` 文件在项目根目录。
+
+**2. 打包 JAR 文件:**
+
+生成 `pom.xml` 后，可以打包 JAR 文件。
+```bash
+clojure -X:package
+```
+此命令会读取 `pom.xml`（默认查找项目根目录下的 `pom.xml`），并将 JAR 文件输出到 `target/` 目录。JAR 文件名将根据 `pom.xml` 中的 artifactId 和 version 自动生成，例如 `target/sqlite-replicate-0.1.0-SNAPSHOT.jar`。
+
+生成的 JAR 文件位于 `target/` 目录下。
+
+### 部署到 Clojars (Deploying to Clojars)
+
+部署到 Clojars 需要您拥有一个 Clojars 账户，并在本地配置好 Clojars API Token (通常通过 `~/.clojars/credentials.clj` 文件或环境变量 `CLOJARS_USERNAME` / `CLOJARS_TOKEN`)。
+
+本项目使用 `deps-deploy` 工具进行部署。`deps.edn` 中已配置好 `:deploy` alias。
+
+**1. 确保版本号已更新:**
+
+在部署新版本之前，请务必更新 `deps.edn` 文件中 `:pom-data` 下的 `:version` 字段。例如，从 `"0.1.0-SNAPSHOT"` 更新到 `"0.1.0"` (或者其他非快照版本)。
+
+**2. 生成最新的 `pom.xml` 和 JAR 文件:**
+
+按照 "本地打包" 部分的说明，使用更新后的版本号（已在 `deps.edn` 中修改）重新生成 `pom.xml` 和 JAR 文件。
+
+```bash
+clojure -X:create-pom
+clojure -X:package
+```
+(确保 `deps.edn` 中的 `:version` 已更新为你希望发布的版本)
+
+**3. 执行部署:**
+
+```bash
+clojure -M:deploy
+```
+此命令会读取 `pom.xml` 文件，找到对应的 JAR 包 (通常在 `target/` 目录下，名称与 `pom.xml` 中的 artifactId 和 version 一致)，然后将其上传到 Clojars。
+注意：我们使用 `clojure -M:deploy` 而不是 `-X` 是因为 `:deploy` alias 在 `deps.edn` 中配置的是 `:main-opts`。
+
+如果您需要对发布进行 GPG 签名，可以在 `:deploy` alias 的 `:main-opts` 中添加相关参数，如 `"--sign-releases" "--gpg-key" "YOUR_GPG_KEY_ID"`，并确保本地 GPG 环境已配置正确。
+
+部署成功后，您的库就可以被其他 Clojure 项目作为依赖引用了。
+
 ## 1. 环境准备
 1. 安装 Clojure（推荐使用 [Clojure CLI](https://clojure.org/guides/getting_started) 或 Leiningen）。
 2. 从 [Litestream 官网](https://litestream.io/) 下载并安装 Windows 版 `.msi`，安装后会在系统服务列表中出现 *Litestream*。
