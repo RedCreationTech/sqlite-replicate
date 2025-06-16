@@ -5,4 +5,24 @@
        http-kit/http-kit {:mvn/version "2.7.0"}}
   :aliases {:run {:main-opts ["-m" "myapp.db"]}
             :service {:main-opts ["-m" "myapp.service"]}
-            :standby {:main-opts ["-m" "myapp.standby"]}}}
+           :standby {:main-opts ["-m" "myapp.standby"]}
+           :test {:extra-paths ["test"]
+                  :extra-deps {org.clojure/clojure {:mvn/version "1.12.0"}
+                               org.clojure/test.check {:mvn/version "1.1.1"}
+                               clj-http-lite/clj-http-lite {:mvn/version "0.3.0"}
+                               org.clojure/data.json {:mvn/version "2.5.0"}}
+                  :main-opts ["-m" "runner"]}}
+ :pom-data {:lib 'net.clojars.zhaoyul/sqlite-replicate
+            :version "0.1.0-SNAPSHOT"
+            :description "A library for SQLite replication using Litestream and MinIO."
+            :url "https://github.com/your-username/sqlite-replicate"
+            :licenses [:license
+                       {:name "Eclipse Public License"
+                        :url "http://www.eclipse.org/legal/epl-v10.html"}]
+            :developers [:developer
+                         {:name "Your Name"
+                          :email "your.email@example.com"}]
+            :scm {:url "https://github.com/your-username/sqlite-replicate"
+                  :connection "scm:git:git://github.com/your-username/sqlite-replicate.git"
+                  :developer-connection "scm:git:ssh://git@github.com/your-username/sqlite-replicate.git"
+                  :tag "HEAD"}}}
