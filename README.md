@@ -11,7 +11,7 @@
 将以下依赖项添加到您的 `deps.edn` 文件中：
 
 ```clojure
-com.example/sqlite-replicate {:mvn/version "0.1.0-SNAPSHOT"}
+net.clojars.zhaoyul/sqlite-replicate {:mvn/version "0.1.0-SNAPSHOT"}
 ; 发布后请替换为实际版本号
 ```
 
@@ -156,6 +156,129 @@ dbs:
 *   **配置管理 (Configuration Management):** 使用适当的配置库或系统（如环境变量、Integrant、Mount）来管理设置。
 *   **幂等性 (Idempotency):** 在可能的情况下，确保操作是幂等的。
 *   **安全性 (Security):** 安全地管理密钥（MinIO 密钥），最好在版本控制之外（例如，使用注入到 Litestream 和应用程序中的环境变量）。
+
+### 在 Luminus 项目中使用 (Using in a Luminus Project)
+
+Luminus 项目通常使用 `mount` 来管理应用程序状态和组件生命周期。以下是如何将此库集成到 Luminus 项目中的概念性示例。
+
+**1. 添加依赖:**
+
+在您的 `deps.edn` 文件中添加依赖：
+```clojure
+;; deps.edn
+net.clojars.zhaoyul/sqlite-replicate {:mvn/version "0.1.0-SNAPSHOT"} ; 请替换为最新版本
+```
+
+如果您仍在使用 Leiningen (`project.clj`)：
+```clojure
+;; project.clj
+[net.clojars.zhaoyul/sqlite-replicate "0.1.0-SNAPSHOT"] ; 请替换为最新版本
+```
+
+**2. 配置:**
+
+Luminus 项目通常将配置存储在 `config.edn` 中，并通过 `myapp.config/env` 访问。您可以在此处定义数据库路径、MinIO 连接信息以及 Litestream 配置文件路径。
+
+例如，在您的 `config.edn` 中：
+```clojure
+{:database {:path "/path/to/your/luminus-app.db"}
+ :health-check-port 3001 ; 或您选择的任何端口
+ :litestream-config-path "/path/to/your/litestream.yml"
+ :minio-config {:s3-access-key-id "your-minio-access-key"
+                :s3-secret-access-key "your-minio-secret-key"
+                :s3-endpoint "http://localhost:9000"
+                :s3-bucket "your-luminus-bucket"
+                :s3-path "luminus_db_replica"}
+ ;; ... 其他 Luminus 配置
+ }
+```
+
+**3. 使用 Mount `defstate` 初始化组件:**
+
+在您的 Luminus 项目的核心命名空间或专门的组件命名空间中，您可以使用 `mount/defstate` 来管理本库提供的组件。
+
+```clojure
+(ns myapp.core ; 或例如 myapp.components.database, myapp.components.replication
+  (:require [mount.core :as mount]
+            [myapp.config :refer [env]] ; Luminus 项目的配置
+            ;; 假设本库的命名空间调整为更符合 Clojars 规范
+            [net.clojars.zhaoyul.sqlite-replicate.db :as sr-db]
+            [net.clojars.zhaoyul.sqlite-replicate.service :as sr-service]
+            ;; 如果需要备用节点监控功能:
+            ;; [net.clojars.zhaoyul.sqlite-replicate.standby :as sr-standby]
+            ))
+
+;; 初始化数据库 (如果需要库来处理 PRAGMA 设置等)
+(mount/defstate app-sqlite-db
+  :start (sr-db/initialize-database!
+           {:dbtype "sqlite" :dbname (-> env :database :path)})
+  :stop  nil) ; 您可以根据需要添加停止逻辑，例如关闭连接池（如果适用）
+
+;; 启动健康检查服务 (如果您的 Luminus 应用需要此独立的健康检查服务)
+;; 注意: Luminus 自身会创建一个 Web 服务器。如果仅需健康检查，
+;;       可以考虑将健康检查逻辑集成到 Luminus 的路由中，
+;;       或仅在主节点且不使用 Luminus 自带 Web 服务时启动此服务。
+(mount/defstate health-check-server
+  :start (let [port (-> env :health-check-port)]
+           (println (str "Starting health-check server on port " port))
+           (sr-service/start-server {:port port}))
+  :stop  (when health-check-server ; 确保 health-check-server 已启动
+           (println "Stopping health-check server...")
+           (sr-service/stop-server health-check-server))) ; 假设 sr-service/stop-server 接受服务器实例
+
+;; 后台写入程序 (可选, 主要用于测试复制)
+(mount/defstate background-writer
+  :start (let [db-path (-> env :database :path)]
+            (println "Starting background writer for database:" db-path)
+            (sr-service/start-writer {:db-spec {:dbtype "sqlite" :dbname db-path}}))
+  :stop (when background-writer
+          (println "Stopping background writer...")
+          (sr-service/stop-writer background-writer))) ; 假设 sr-service/stop-writer 接受 writer 实例
+
+
+;; 启动应用程序 (示例)
+(defn -main [& args]
+  (mount/start)
+  ;; 应用程序的其他启动逻辑
+  )
+```
+
+**4. Litestream 进程管理:**
+
+如前所述，`litestream replicate` 进程通常独立于 Clojure 应用程序运行。您应该使用 `examples/scripts/run_litestream.sh` 或 `examples/scripts/run_litestream.bat` （根据您的 `litestream.yml` 路径进行修改）来启动和管理 Litestream 守护进程。
+
+您的 Luminus 应用程序的部署脚本或进程管理器 (如 systemd, Docker Compose) 应负责同时启动您的 Luminus 应用和相关的 Litestream 进程。
+
+**5. 备用节点 (Standby) 功能:**
+
+如果要在 Luminus 应用中使用备用节点监控和自动故障转移功能：
+```clojure
+;; 在 myapp.core 或相关组件命名空间
+;; (require '[net.clojars.zhaoyul.sqlite-replicate.standby :as sr-standby])
+
+;; (mount/defstate standby-monitor
+;;   :start (let [config {:primary-health-url (-> env :standby :primary-url)
+;;                       :health-check-interval-ms (-> env :standby :check-interval 5000)
+;;                       :db-path (-> env :database :path) ; 本地数据库路径
+;;                       :litestream-config-path (-> env :litestream-config-path)
+;;                       :s3-bucket (-> env :minio-config :s3-bucket)
+;;                       :s3-path (-> env :minio-config :s3-path)
+;;                       :s3-endpoint (-> env :minio-config :s3-endpoint)
+;;                       :post-failover-actions {
+;;                         :start-server? true
+;;                         :server-config {:port (-> env :health-check-port)}
+;;                         :start-writer? (-> env :standby :start-writer-after-failover true)
+;;                         :writer-db-spec {:dbtype "sqlite" :dbname (-> env :database :path)}}}]
+;;            (println "Starting standby monitoring...")
+;;            (sr-standby/start-monitoring config)) ; 假设 start-monitoring 返回控制句柄或 future
+;;   :stop (when standby-monitor
+;;           (println "Stopping standby monitoring...")
+;;           ;; (sr-standby/stop-monitoring standby-monitor) ; 需要实现停止逻辑
+;;           ))
+```
+上述备用节点示例是概念性的。您需要确保 `sr-standby/start-monitoring` 是非阻塞的（例如，在单独的线程中运行其循环），并且可以被 `mount/stop` 停止。`myapp.standby` 中的 `-main` 函数需要重构为一个可由库用户调用的函数，并提供停止机制。
+
+通过这种方式，您可以将 SQLite 数据库的初始化、可选的健康检查服务以及 Litestream 的（间接）管理集成到 Luminus 应用的生命周期中。
 
 ## 1. 环境准备
 1. 安装 Clojure（推荐使用 [Clojure CLI](https://clojure.org/guides/getting_started) 或 Leiningen）。
