@@ -295,23 +295,29 @@ clojure -M:test
 
 ### 本地打包 (Local Packaging)
 
-要将此库打包为 JAR 文件以供本地使用或部署，我们使用 `depstar` 工具。`deps.edn` 文件中已配置好相关 alias。
+要将此库打包为 JAR 文件以供本地使用或部署，我们现在使用 `clojure.tools.build`。相关的构建任务定义在项目根目录的 `build.clj` 文件中，并通过 `deps.edn` 中的 `:build` alias 调用。
 
-**1. 生成 `pom.xml`:**
-
-`pom.xml` 文件包含了项目的元数据，是打包和部署所必需的。它会根据 `deps.edn` 文件中的 `:pom-data` 部分自动生成。
+**1. 清理旧的构建产物 (可选):**
 ```bash
-clojure -X:create-pom
+clojure -T:build clean
 ```
-此命令会使用 `deps.edn` 中的 `:pom-data` (包括 `:lib` 和 `:version`) 来生成 `pom.xml` 文件在项目根目录。
+此命令会删除 `target` 目录。
 
-**2. 打包 JAR 文件:**
+**2. 生成 `pom.xml`:**
 
-生成 `pom.xml` 后，可以打包 JAR 文件。
+`pom.xml` 文件包含了项目的元数据，是打包和部署所必需的。`build.clj` 中的 `pom` 任务会根据 `deps.edn` 文件中的 `:pom-data` 部分自动生成此文件。
 ```bash
-clojure -X:package
+clojure -T:build pom
 ```
-此命令会读取 `pom.xml`（默认查找项目根目录下的 `pom.xml`），并将 JAR 文件输出到 `target/` 目录。JAR 文件名将根据 `pom.xml` 中的 artifactId 和 version 自动生成，例如 `target/sqlite-replicate-0.1.0-SNAPSHOT.jar`。
+执行此命令后，`pom.xml` 文件将生成在项目根目录 (`pom.xml`)。
+
+**3. 打包 JAR 文件:**
+
+生成 `pom.xml` 后，可以打包 JAR 文件。`jar` 任务会先执行 `clean` 和 `pom`。
+```bash
+clojure -T:build jar
+```
+此命令会将编译后的代码和源文件打包。JAR 文件将根据 `deps.edn` 中 `:pom-data` 的 `:lib` 和 `:version` 命名，并输出到 `target/` 目录，例如 `target/sqlite-replicate-0.1.0-SNAPSHOT.jar`。
 
 生成的 JAR 文件位于 `target/` 目录下。
 
@@ -323,17 +329,17 @@ clojure -X:package
 
 **1. 确保版本号已更新:**
 
-在部署新版本之前，请务必更新 `deps.edn` 文件中 `:pom-data` 下的 `:version` 字段。例如，从 `"0.1.0-SNAPSHOT"` 更新到 `"0.1.0"` (或者其他非快照版本)。
+在部署新版本之前，请务必更新 `deps.edn` 文件中 `:pom-data` 下的 `:version` 字段。例如，从 `"0.1.0-SNAPSHOT"` 更新到 `"0.1.0"` (或者其他非快照版本)。同时，您可能也需要更新 `build.clj` 中定义的 `version` 变量（如果它不是动态读取 `deps.edn` 的话 - 当前 `build.clj` 实现是动态读取的）。
 
 **2. 生成最新的 `pom.xml` 和 JAR 文件:**
 
-按照 "本地打包" 部分的说明，使用更新后的版本号（已在 `deps.edn` 中修改）重新生成 `pom.xml` 和 JAR 文件。
+按照新的 "本地打包" 部分的说明，使用更新后的版本号（已在 `deps.edn` 中修改）通过 `clojure.tools.build` 重新生成 `pom.xml` 和 JAR 文件。
 
 ```bash
-clojure -X:create-pom
-clojure -X:package
+clojure -T:build clean # 清理旧产物
+clojure -T:build jar   # 会自动先生成 pom.xml，然后打包 jar
 ```
-(确保 `deps.edn` 中的 `:version` 已更新为你希望发布的版本)
+(确保 `deps.edn` 中的 `:version` 已更新为你希望发布的版本。`build.clj` 会读取此版本。)
 
 **3. 执行部署:**
 
