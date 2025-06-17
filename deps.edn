@@ -11,18 +11,30 @@
                                org.clojure/test.check {:mvn/version "1.1.1"}
                                clj-http-lite/clj-http-lite {:mvn/version "0.3.0"}
                                org.clojure/data.json {:mvn/version "2.5.0"}}
-                  :main-opts ["-m" "runner"]}}
+                  :main-opts ["-m" "runner"]}
+            :create-pom {:extra-deps {io.github.seancorfield/depstar {:mvn/version "2.2.216"}}
+                         :exec-fn hf.depstar.api/pom
+                         :exec-args {}} ; Default args ensure it uses :pom-data from deps.edn
+            :package {:extra-deps {io.github.seancorfield/depstar {:mvn/version "2.2.216"}}
+                      :exec-fn hf.depstar.api/jar
+                      :exec-args {:pom-file "pom.xml"}} ; Assumes pom.xml is generated
+            :deploy {:extra-deps {slipset/deps-deploy {:mvn/version "0.2.0"}}
+                     :main-opts ["-m" "deps-deploy.deps-deploy" "deploy"
+                                 ;; deps-deploy will use pom.xml found in the project root
+                                 ;; and infer the JAR from the pom.
+                                 ;; Add --sign-releases and --gpg-key if signing.
+                                ]}}}
  :pom-data {:lib 'net.clojars.zhaoyul/sqlite-replicate
             :version "0.1.0-SNAPSHOT"
             :description "A library for SQLite replication using Litestream and MinIO."
-            :url "https://github.com/your-username/sqlite-replicate"
+            :url "https://github.com/RedCreationTech/sqlite-replicate"
             :licenses [:license
                        {:name "Eclipse Public License"
                         :url "http://www.eclipse.org/legal/epl-v10.html"}]
             :developers [:developer
-                         {:name "Your Name"
-                          :email "your.email@example.com"}]
-            :scm {:url "https://github.com/your-username/sqlite-replicate"
-                  :connection "scm:git:git://github.com/your-username/sqlite-replicate.git"
-                  :developer-connection "scm:git:ssh://git@github.com/your-username/sqlite-replicate.git"
+                         {:name "redcreation"
+                          :email "hd@redcreation.cn"}]
+            :scm {:url "https://github.com/RedCreationTech/sqlite-replicate"
+                  :connection "scm:git:git://github.com/RedCreationTech/sqlite-replicate.git"
+                  :developer-connection "scm:git:ssh://git@github.com/RedCreationTech/sqlite-replicate.git"
                   :tag "HEAD"}}}
