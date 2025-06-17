@@ -343,6 +343,22 @@ clojure -T:build jar   # 会自动先生成 pom.xml，然后打包 jar
 
 **3. 执行部署:**
 
+您可以使用以下两种方式之一进行部署：
+
+**方式一：使用部署脚本（推荐）**
+
+项目提供了一个交互式部署脚本，它会提示您输入 Clojars 用户名和 API token：
+
+```bash
+./deploy.sh
+```
+
+此脚本会提示您输入凭据，设置必要的环境变量，执行部署，然后清除环境变量。
+
+**方式二：直接使用 Clojure CLI**
+
+如果您已经设置了环境变量 `CLOJARS_USERNAME` 和 `CLOJARS_PASSWORD`（实际上是您的 API token），可以直接运行：
+
 ```bash
 clojure -M:deploy
 ```

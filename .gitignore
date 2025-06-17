@@ -5,3 +5,4 @@
 /app-data.db
 /app-data.db-shm
 /app-data.db-wal
+/target/

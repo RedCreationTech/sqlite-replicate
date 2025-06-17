@@ -12,14 +12,9 @@
                                clj-http-lite/clj-http-lite {:mvn/version "0.3.0"}
                                org.clojure/data.json {:mvn/version "2.5.0"}}
                   :main-opts ["-m" "runner"]}
-            :deploy {:extra-deps {slipset/deps-deploy {:mvn/version "0.2.0"}}
-                     :main-opts ["-m" "deps-deploy.deps-deploy" "deploy"
-                                 ;; deps-deploy will use pom.xml found in the project root
-                                 ;; and infer the JAR from the pom.
-                                 ;; Add --sign-releases and --gpg-key if signing.
-                                ]}
-            :build {:paths ["."] ; Assuming build.clj is in the project root
-                    :deps {org.clojure/tools.build {:git/tag "v0.9.6" :git/sha "2992345"}}
+            :deploy {:extra-deps {slipset/deps-deploy {:mvn/version "0.2.2"}}
+                     :main-opts ["-m" "deps-deploy.deps-deploy" "deploy"]}
+            :build {:paths ["."] 
                     :ns-default build
                    }}
  :pom-data {:lib 'net.clojars.zhaoyul/sqlite-replicate
