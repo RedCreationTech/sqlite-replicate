@@ -3,20 +3,20 @@
         com.github.seancorfield/next.jdbc {:mvn/version "1.3.925"}
        org.xerial/sqlite-jdbc {:mvn/version "3.46.0.0"}
        http-kit/http-kit {:mvn/version "2.7.0"}}
-  :aliases {:run {:main-opts ["-m" "myapp.db"]}
-            :service {:main-opts ["-m" "myapp.service"]}
-           :standby {:main-opts ["-m" "myapp.standby"]}
-           :test {:extra-paths ["test"]
-                  :extra-deps {org.clojure/clojure {:mvn/version "1.12.0"}
-                               org.clojure/test.check {:mvn/version "1.1.1"}
-                               clj-http-lite/clj-http-lite {:mvn/version "0.3.0"}
-                               org.clojure/data.json {:mvn/version "2.5.0"}}
-                  :main-opts ["-m" "runner"]}
-            :deploy {:extra-deps {slipset/deps-deploy {:mvn/version "0.2.2"}}
-                     :main-opts ["-m" "deps-deploy.deps-deploy" "deploy"]}
-            :build {:paths ["."] 
-                    :ns-default build
-                   }}
+  :aliases {:run {:main-opts ["-m" "sqlite-replicate.db"]}
+            :service {:main-opts ["-m" "sqlite-replicate.service"]}
+            :standby {:main-opts ["-m" "sqlite-replicate.standby"]}
+            :test {:extra-paths ["test"]
+                   :extra-deps {org.clojure/clojure {:mvn/version "1.12.0"}
+                                org.clojure/test.check {:mvn/version "1.1.1"}
+                                clj-http-lite/clj-http-lite {:mvn/version "0.3.0"}
+                                org.clojure/data.json {:mvn/version "2.5.0"}}
+                   :main-opts ["-m" "runner"]}
+            :deploy {:extra-deps {slipset/deps-deploy {:mvn/version "0.2.0"}}
+                     :exec-fn deps-deploy.deps-deploy/deploy
+                     :exec-args {:installer :remote}}
+            :build {:paths ["."]
+                    :ns-default build}}
  :pom-data {:lib 'net.clojars.zhaoyul/sqlite-replicate
             :version "0.1.0-SNAPSHOT"
             :description "A library for SQLite replication using Litestream and MinIO."

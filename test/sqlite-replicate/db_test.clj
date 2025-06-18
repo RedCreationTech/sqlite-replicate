@@ -1,6 +1,6 @@
-(ns myapp.db-test
+(ns sqlite-replicate.db-test
   (:require [clojure.test :refer :all]
-            [myapp.db :as sut] ; sut for "system under test"
+            [sqlite-replicate.db :as sut] ; sut for "system under test"
             [next.jdbc :as jdbc]
             [next.jdbc.sql :as sql]
             [clojure.java.io :as io]))

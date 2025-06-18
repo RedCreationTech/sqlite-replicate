@@ -1,8 +1,8 @@
-(ns myapp.standby-test
+(ns sqlite-replicate.standby-test
   (:require [clojure.test :refer :all]
-            [myapp.standby :as sut]
-            [myapp.db :as mock-db] ; For mocking db functions
-            [myapp.service :as mock-service] ; For mocking service functions
+            [sqlite-replicate.standby :as sut]
+            [sqlite-replicate.db :as mock-db] ; For mocking db functions
+            [sqlite-replicate.service :as mock-service] ; For mocking service functions
             [clojure.java.shell :as mock-shell] ; For mocking shell commands
             [org.httpkit.client :as mock-client])) ; For mocking http client calls
 
@@ -14,11 +14,11 @@
         writer-started (atom false)
         primary-healthy-state (atom true)] ; Define upfront
 
-    (with-redefs [;; Mock myapp.standby specific functions
+    (with-redefs [;; Mock sqlite-replicate.standby specific functions
                   sut/restore-db (fn [] (reset! restore-called true) true) ; Assume restore succeeds
                   sut/start-service (fn [] (reset! service-started true)) ; Mock to prevent blocking
 
-                  ;; Mock external calls made by functions in myapp.standby
+                  ;; Mock external calls made by functions in sqlite-replicate.standby
                   mock-client/get (fn [url params] ; Mock for sut/port-active?
                                     (if (= sut/health-url url)
                                       (do

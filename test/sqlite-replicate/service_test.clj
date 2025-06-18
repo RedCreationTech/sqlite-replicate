@@ -1,7 +1,7 @@
-(ns myapp.service-test
+(ns sqlite-replicate.service-test
   (:require [clojure.test :refer :all]
-            [myapp.service :as sut]
-            [myapp.db :as mock-db] ; For mocking
+            [sqlite-replicate.service :as sut]
+            [sqlite-replicate.db :as mock-db] ; For mocking
             [org.httpkit.client :as http-client]
             [clojure.data.json :as json]))
 

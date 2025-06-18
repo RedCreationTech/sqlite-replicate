@@ -35,7 +35,7 @@ net.clojars.zhaoyul/sqlite-replicate {:mvn/version "0.1.0-SNAPSHOT"}
                 :s3-secret-access-key "minioadmin"
                 :s3-endpoint "http://localhost:9000"
                 :s3-bucket "clojure-db-replica"
-                :s3-path "myapp_prod_db"}}
+                :s3-path "sqlite-replicate_prod_db"}}
 ```
 
 **2. SQLite 数据库路径 (SQLite Database Path):**
@@ -63,7 +63,7 @@ dbs:
       - name: s3-main # 或任意名称
         type: s3
         bucket: ${MINIO_BUCKET} # 例如, clojure-db-replica
-        path: ${MINIO_DB_PATH_IN_BUCKET} # 例如, myapp_prod_db
+        path: ${MINIO_DB_PATH_IN_BUCKET} # 例如, sqlite-replicate_prod_db
         endpoint: ${MINIO_ENDPOINT} # 例如, http://127.0.0.1:9000
         force-path-style: true # 通常对于 MinIO 设置为 true
         # 推荐设置，请根据需要调整
@@ -78,9 +78,9 @@ dbs:
 **1. 初始化数据库 (可选):**
 如果您的应用程序尚未管理其数据库结构 (schema)，您可以使用：
 ```clojure
-(require '[myapp.db :as app-db])
+(require '[sqlite-replicate.db :as app-db])
 
-; 定义您的 db-spec，类似于 myapp.db 中的做法
+; 定义您的 db-spec，类似于 sqlite-replicate.db 中的做法
 (def my-db-spec {:dbtype "sqlite" :dbname "/path/to/your/app-data.db"})
 
 (app-db/initialize-database! my-db-spec) ; 传递您的 db-spec
@@ -90,7 +90,7 @@ dbs:
 **2. 启动 HTTP 服务 (主节点):**
 该库提供了一个简单的 HTTP 服务器 (使用 `http-kit`)，带有一个 `/health` 健康检查端点。
 ```clojure
-(require '[myapp.service :as app-service])
+(require '[sqlite-replicate.service :as app-service])
 
 ; 服务配置
 (def service-config {:port 3001 ; 健康检查服务器的目标端口
@@ -104,8 +104,8 @@ dbs:
 **3. 启动后台写入程序 (主节点, 可选):**
 此函数会启动一个后台线程，定期将时间戳写入 `events` 表。这主要用于演示目的，以确保数据正在被复制。
 ```clojure
-(require '[myapp.service :as app-service])
-(require '[myapp.db :as app-db]) ; 如果需要传递 db-spec
+(require '[sqlite-replicate.service :as app-service])
+(require '[sqlite-replicate.db :as app-db]) ; 如果需要传递 db-spec
 
 (app-service/start-writer {:db-spec my-db-spec}) ; 传递供写入程序使用的 db-spec
 ```
@@ -128,7 +128,7 @@ dbs:
 备用节点功能允许一个节点监控主节点，并在主节点变得不健康时尝试进行故障转移。
 
 ```clojure
-(require '[myapp.standby :as app-standby])
+(require '[sqlite-replicate.standby :as app-standby])
 
 (def standby-config
   {:primary-health-url "http://primary-node-ip:3001/health" ; 主节点健康检查 URL
@@ -136,7 +136,7 @@ dbs:
    :db-path "/path/to/local/standby-app-data.db" ; 本地备用数据库路径
    :litestream-config-path "/path/to/standby/litestream.yml" ; 用于恢复的 Litestream 配置
    :s3-bucket "clojure-db-replica" ; 用于 litestream restore 命令
-   :s3-path "myapp_prod_db"      ; 用于 litestream restore 命令
+   :s3-path "sqlite-replicate_prod_db"      ; 用于 litestream restore 命令
    :s3-endpoint "http://localhost:9000" ; 用于 litestream restore 命令
    ; 用于 litestream restore 的 MinIO密钥应位于环境变量或 litestream.yml 中
    :post-failover-actions {:start-server? true     ; 恢复后启动本地 HTTP 服务
@@ -149,7 +149,7 @@ dbs:
 ; 例如，一个接受配置并返回 future 或控制 atom 的函数。
 (app-standby/start-monitoring standby-config)
 ```
-`myapp.standby` 命名空间将需要一个类似 `start-monitoring` 的函数，该函数封装来自 `-main` 的循环并且是可配置的。备用逻辑中的恢复命令将使用配置的 S3 部分构建。
+`sqlite-replicate.standby` 命名空间将需要一个类似 `start-monitoring` 的函数，该函数封装来自 `-main` 的循环并且是可配置的。备用逻辑中的恢复命令将使用配置的 S3 部分构建。
 
 ### 重要注意事项 (Important Considerations):
 *   **错误处理 (Error Handling):** 应围绕 I/O 操作、服务启动和外部进程调用添加稳健的错误处理。
@@ -177,7 +177,7 @@ net.clojars.zhaoyul/sqlite-replicate {:mvn/version "0.1.0-SNAPSHOT"} ; 请替换
 
 **2. 配置:**
 
-Luminus 项目通常将配置存储在 `config.edn` 中，并通过 `myapp.config/env` 访问。您可以在此处定义数据库路径、MinIO 连接信息以及 Litestream 配置文件路径。
+Luminus 项目通常将配置存储在 `config.edn` 中，并通过 `sqlite-replicate.config/env` 访问。您可以在此处定义数据库路径、MinIO 连接信息以及 Litestream 配置文件路径。
 
 例如，在您的 `config.edn` 中：
 ```clojure
@@ -198,9 +198,9 @@ Luminus 项目通常将配置存储在 `config.edn` 中，并通过 `myapp.confi
 在您的 Luminus 项目的核心命名空间或专门的组件命名空间中，您可以使用 `mount/defstate` 来管理本库提供的组件。
 
 ```clojure
-(ns myapp.core ; 或例如 myapp.components.database, myapp.components.replication
+(ns sqlite-replicate.core ; 或例如 sqlite-replicate.components.database, sqlite-replicate.components.replication
   (:require [mount.core :as mount]
-            [myapp.config :refer [env]] ; Luminus 项目的配置
+            [sqlite-replicate.config :refer [env]] ; Luminus 项目的配置
             ;; 假设本库的命名空间调整为更符合 Clojars 规范
             [net.clojars.zhaoyul.sqlite-replicate.db :as sr-db]
             [net.clojars.zhaoyul.sqlite-replicate.service :as sr-service]
@@ -253,7 +253,7 @@ Luminus 项目通常将配置存储在 `config.edn` 中，并通过 `myapp.confi
 
 如果要在 Luminus 应用中使用备用节点监控和自动故障转移功能：
 ```clojure
-;; 在 myapp.core 或相关组件命名空间
+;; 在 sqlite-replicate.core 或相关组件命名空间
 ;; (require '[net.clojars.zhaoyul.sqlite-replicate.standby :as sr-standby])
 
 ;; (mount/defstate standby-monitor
@@ -276,7 +276,7 @@ Luminus 项目通常将配置存储在 `config.edn` 中，并通过 `myapp.confi
 ;;           ;; (sr-standby/stop-monitoring standby-monitor) ; 需要实现停止逻辑
 ;;           ))
 ```
-上述备用节点示例是概念性的。您需要确保 `sr-standby/start-monitoring` 是非阻塞的（例如，在单独的线程中运行其循环），并且可以被 `mount/stop` 停止。`myapp.standby` 中的 `-main` 函数需要重构为一个可由库用户调用的函数，并提供停止机制。
+上述备用节点示例是概念性的。您需要确保 `sr-standby/start-monitoring` 是非阻塞的（例如，在单独的线程中运行其循环），并且可以被 `mount/stop` 停止。`sqlite-replicate.standby` 中的 `-main` 函数需要重构为一个可由库用户调用的函数，并提供停止机制。
 
 通过这种方式，您可以将 SQLite 数据库的初始化、可选的健康检查服务以及 Litestream 的（间接）管理集成到 Luminus 应用的生命周期中。
 
@@ -291,7 +291,7 @@ Luminus 项目通常将配置存储在 `config.edn` 中，并通过 `myapp.confi
 ```bash
 clojure -M:test
 ```
-此命令会执行 `test/runner.clj` 中定义的测试运行器，它将加载并运行所有在 `myapp.*-test` 命名空间模式下的测试。请确保所有测试通过后再进行打包或部署。
+此命令会执行 `test/runner.clj` 中定义的测试运行器，它将加载并运行所有在 `sqlite-replicate.*-test` 命名空间模式下的测试。请确保所有测试通过后再进行打包或部署。
 
 ### 本地打包 (Local Packaging)
 
@@ -391,12 +391,12 @@ cd C:\minio
 ```
 ├─deps.edn
 └─src
-   └─myapp
+   └─sqlite-replicate
       └─db.clj
       └─service.clj
       └─standby.clj
 ```
-`deps.edn` 声明依赖 `next.jdbc` 与 `sqlite-jdbc` 等。`src/myapp/db.clj` 实现了简单的用户表读写逻辑并应用 Litestream 所需的 PRAGMA 设置。
+`deps.edn` 声明依赖 `next.jdbc` 与 `sqlite-jdbc` 等。`src/sqlite-replicate/db.clj` 实现了简单的用户表读写逻辑并应用 Litestream 所需的 PRAGMA 设置。
 
 ### 运行独立示例 (Standalone Example)
 **注意:** 以下说明适用于将项目作为独立应用程序运行的情况，主要用于演示或库本身的开发。当将此项目用作库时，请参阅上面的“将本项目用作库”部分。
@@ -404,24 +404,24 @@ cd C:\minio
 在项目根目录执行初始化数据库 (会生成 `app-data.db`):
 ```bash
 clojure -M:run
-; 此别名通常调用 myapp.db/-main，该函数会初始化并添加一些数据
+; 此别名通常调用 sqlite-replicate.db/-main，该函数会初始化并添加一些数据
 ```
 执行后会生成 `app-data.db` 并打印插入与查询结果。
 
 ## 4. 启动 HTTP 服务并持续写入数据库 (Standalone Example)
 
-项目还提供了 `myapp.service`，启动后会在 `3000` 端口暴露 `/health` 接口 (健康检查端点)，并每秒向 `events` 表写入当前时间戳。
+项目还提供了 `sqlite-replicate.service`，启动后会在 `3000` 端口暴露 `/health` 接口 (健康检查端点)，并每秒向 `events` 表写入当前时间戳。
 
 ```bash
 clojure -M:service
 ```
 
 访问 <http://localhost:3000/health> 可得到 `OK`，同时可在数据库中看到不断新增的记录。
-(注意: 如库示例中所示，端口可能是3001；如果独立运行，请从 `myapp.service` 中确认。)
+(注意: 如库示例中所示，端口可能是3001；如果独立运行，请从 `sqlite-replicate.service` 中确认。)
 
 ### 单机运行两个服务与一个 MinIO (Standalone Example)
 
-若要在单机测试多实例，可复制项目目录两份，例如 `instance-a/` 与 `instance-b/`，分别启动 Litestream 和 `myapp.service`，但共用同一 MinIO。
+若要在单机测试多实例，可复制项目目录两份，例如 `instance-a/` 与 `instance-b/`，分别启动 Litestream 和 `sqlite-replicate.service`，但共用同一 MinIO。
 
 在各自的 `litestream.yml` 中修改 `dbs.[0].path` 指向对应实例的数据库文件，并将 `path` 字段区分开，例如 `database/a`、`database/b`。随后分别执行：
 
@@ -483,16 +483,16 @@ C:\minio\minio.exe server C:\minio-data --console-address ":9001"
    ```powershell
    clojure -M:run
    ```
-   或者直接调用 `clojure -m myapp.db`。
+   或者直接调用 `clojure -m sqlite-replicate.db`。
 6. 查看控制台输出和本地数据库内容，确认数据与主机一致。
 7. 如需持续同步，可在第二台机也启动 Litestream 服务，指向同一 MinIO 存储。
 
 ## 9. 自动故障转移示例 (Standalone Example)
 
-项目新增了 `myapp.standby`，用于在候选节点上定期检查主节点是否存活。如果检测到
+项目新增了 `sqlite-replicate.standby`，用于在候选节点上定期检查主节点是否存活。如果检测到
 `http://localhost:3001/health` 无响应，将自动执行 `litestream restore` 恢复数
 据并启动本地服务接管。
-(当作为库使用时，此备用逻辑将通过类似 `myapp.standby/start-monitoring` 的可配置函数调用，如“将本项目用作库”部分所述。)
+(当作为库使用时，此备用逻辑将通过类似 `sqlite-replicate.standby/start-monitoring` 的可配置函数调用，如“将本项目用作库”部分所述。)
 
 ```bash
 clojure -M:standby

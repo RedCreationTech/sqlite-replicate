@@ -1,4 +1,4 @@
-(ns myapp.db
+(ns sqlite-replicate.db
   (:require [next.jdbc :as jdbc]
             [next.jdbc.sql :as sql]))
 
