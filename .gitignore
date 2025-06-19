@@ -6,3 +6,5 @@
 /app-data.db-shm
 /app-data.db-wal
 /target/
+app-data*
+.app-data*

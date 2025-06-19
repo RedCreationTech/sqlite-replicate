@@ -15,7 +15,7 @@
         primary-healthy-state (atom true)] ; Define upfront
 
     (with-redefs [;; Mock sqlite-replicate.standby specific functions
-                  sut/restore-db (fn [] (reset! restore-called true) true) ; Assume restore succeeds
+                  sut/restore-db (fn [& _] (reset! restore-called true) {:status :success}) ; Assume restore succeeds
                   sut/start-service (fn [] (reset! service-started true)) ; Mock to prevent blocking
 
                   ;; Mock external calls made by functions in sqlite-replicate.standby
@@ -43,7 +43,7 @@
         (reset! service-started false)
         (reset! primary-healthy-state true) ; Set state for this test
 
-        (with-redefs [sut/port-active? (fn []
+        (with-redefs [sut/port-active? (fn [& _]
                                          (println (str "Mocked port-active? returning: " @primary-healthy-state))
                                          @primary-healthy-state)]
             (let [failover-attempted? (sut/check-primary-and-failover!)]
@@ -63,14 +63,17 @@
 
         ;; Redefine start-service to check its components for this specific sub-test
         ;; Also redefine port-active? for this scope
-        (with-redefs [sut/port-active? (fn []
+        (with-redefs [sut/port-active? (fn [& _]
                                          (println (str "Mocked port-active? returning: " @primary-healthy-state))
                                          @primary-healthy-state)
+                      ;; 确保 start-service 不会阻塞测试
                       sut/start-service (fn []
                                           (mock-db/initialize-database!)
                                           (mock-service/start-server)
                                           (mock-service/start-writer)
-                                          (reset! service-started true))]
+                                          (reset! service-started true)
+                                          ;; 不要在测试中阻塞
+                                          nil)]
 
             (let [failover-attempted? (sut/check-primary-and-failover!)]
                 (is failover-attempted? "Should attempt failover if primary is unhealthy.")
@@ -86,10 +89,10 @@
         (reset! service-started false)
         (reset! primary-healthy-state false) ; Set state for this test
 
-        (with-redefs [sut/port-active? (fn []
+        (with-redefs [sut/port-active? (fn [& _]
                                          (println (str "Mocked port-active? returning: " @primary-healthy-state))
                                          @primary-healthy-state)
-                      sut/restore-db (fn [] (reset! restore-called true) false)] ; Mock restore to fail
+                      sut/restore-db (fn [& _] (reset! restore-called true) {:status :failure, :message "Mock restore failure"})] ; Mock restore to fail
             (let [failover-attempted? (sut/check-primary-and-failover!)]
                 (is (not failover-attempted?) "Failover should be marked as unsuccessful if restore fails.")
                 (is @restore-called "restore-db should be called.")

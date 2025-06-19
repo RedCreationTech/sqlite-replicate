@@ -7,7 +7,7 @@
             [clojure.string :as str]
             [clojure.tools.logging :as log]))
 
-(def health-url "http://localhost:3001/health")
+(def health-url "http://localhost:3011/health")
 
 (defn set-sqlite-pragmas!
   "设置SQLite的PRAGMA参数，优化Litestream性能"
@@ -40,7 +40,7 @@
   ([] (restore-db {}))
   ([config]
    (try
-     (let [output-path (or (:output-path config) "app-data.db")
+     (let [output-path (or (:output-path config) "./app-data.db") ; 默认恢复到项目根目录
            s3-access-key (or (:s3-access-key config) (System/getenv "LITESTREAM_ACCESS_KEY_ID"))
            s3-secret-key (or (:s3-secret-key config) (System/getenv "LITESTREAM_SECRET_ACCESS_KEY"))
            s3-endpoint (or (:s3-endpoint config) (System/getenv "LITESTREAM_ENDPOINT"))
@@ -73,7 +73,9 @@
   (service/start-server)
   (service/start-writer)
   (println "Service running as primary. Press Ctrl+C to exit.")
-  @(promise))
+  ;; 在非测试环境中阻塞，在测试环境中不阻塞
+  (when-not (= "test" (System/getProperty "clojure.main.test"))
+    @(promise)))
 
 (defn check-primary-and-failover!
   "检查主节点健康状态，如果不健康则执行故障转移"
@@ -89,7 +91,9 @@
          (if (= :success (:status restore-result))
            (do
              (log/info "数据库恢复成功，启动服务")
-             (start-service) ; 这会阻塞，除非在测试中处理
+             ;; 调用 start-service 并忽略返回值
+             ;; 在生产环境中，start-service 会阻塞，但在测试环境中不会
+             (start-service)
              true) ; 返回true表示故障转移尝试成功
            (do
              (log/error "故障转移失败：" (:message restore-result))

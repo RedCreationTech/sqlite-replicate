@@ -1,0 +1,18 @@
+# litestream.yml 配置文件
+# 使用环境变量存储敏感信息
+access-key-id: minioadmin
+secret-access-key: minioadmin
+
+dbs:
+  - path: ./app-data.db  # 数据库文件放在项目根目录
+    replicas:
+      - name: s3-main
+        type: s3
+        bucket: clojure-db-replica  # MinIO存储桶名称
+        path: database  # 存储桶内的路径
+        endpoint: http://127.0.0.1:9000 # MinIO服务器API地址
+        force-path-style: true  # 通常对于MinIO设置为true
+        # 推荐设置，请根据需要调整
+        sync-interval: 1s       # 检查变更的频率
+        snapshot-interval: 1h   # 快照间隔
+        retention: 24h          # 保留时间

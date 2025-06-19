@@ -3,6 +3,7 @@
             [sqlite-replicate.service :as sut]
             [sqlite-replicate.db :as mock-db] ; For mocking
             [org.httpkit.client :as http-client]
+            [org.httpkit.server :as http-server]
             [clojure.data.json :as json]))
 
 (def test-server-port 3002)
@@ -13,7 +14,7 @@
         test-server (atom nil)]
     (with-redefs [sut/server test-server ; Isolate server instance for test
                   sut/start-server (fn []
-                                     (reset! test-server (org.httpkit.server/run-server #'sut/health-handler {:port test-server-port}))
+                                     (reset! test-server (http-server/run-server #'sut/health-handler {:port test-server-port}))
                                      (println (str "Test HTTP server started on port " test-server-port)))
                   sut/stop-server (fn []
                                     (when-let [stop-fn @test-server]

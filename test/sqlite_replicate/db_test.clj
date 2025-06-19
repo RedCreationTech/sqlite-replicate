@@ -5,7 +5,7 @@
             [next.jdbc.sql :as sql]
             [clojure.java.io :as io]))
 
-(def test-db-name "test-app-data.db")
+(def test-db-name "test-app-data.db") ; 测试数据库文件放在项目根目录
 (def test-db-spec {:dbtype "sqlite" :dbname test-db-name})
 (def test-ds (jdbc/get-datasource test-db-spec)) ; Use a test-specific datasource
 

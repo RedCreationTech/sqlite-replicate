@@ -26,7 +26,7 @@ if ! clojure -T:build jar; then
 fi
 
 # 检查文件权限
-JAR_FILE="target/sqlite-replicate-0.1.0-SNAPSHOT.jar"
+JAR_FILE="target/sqlite-replicate-0.1.1-SNAPSHOT.jar"
 echo "检查文件权限和大小:"
 ls -la "$JAR_FILE"
 echo "文件可读性检查:"

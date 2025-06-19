@@ -2,7 +2,7 @@
   (:require [next.jdbc :as jdbc]
             [next.jdbc.sql :as sql]))
 
-(def db-spec {:dbtype "sqlite" :dbname "app-data.db"})
+(def db-spec {:dbtype "sqlite" :dbname "./app-data.db"}) ; 数据库文件放在项目根目录
 
 (def ds (jdbc/get-datasource db-spec))
 

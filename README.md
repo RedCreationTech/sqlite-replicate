@@ -11,7 +11,7 @@
 将以下依赖项添加到您的 `deps.edn` 文件中：
 
 ```clojure
-net.clojars.zhaoyul/sqlite-replicate {:mvn/version "0.1.0-SNAPSHOT"}
+net.clojars.zhaoyul/sqlite-replicate {:mvn/version "0.1.1-SNAPSHOT"}
 ; 发布后请替换为实际版本号
 ```
 
@@ -48,28 +48,30 @@ net.clojars.zhaoyul/sqlite-replicate {:mvn/version "0.1.0-SNAPSHOT"}
 
 *   `litestream-config-path`: 指向您的 `litestream.yml` 文件的路径。
 
+**注意:** 如果未指定配置文件路径，默认会在项目根目录查找 `litestream.yml` 文件。同样，数据库文件 `app-data.db` 和测试数据库文件 `test-app-data.db` 也默认放在项目根目录。
+
 **`litestream.yml` 结构示例:**
 
 确保您的 `litestream.yml` 配置了 MinIO 的详细信息，并指向您应用程序的数据库。该库将主要使用此文件来了解您的 Litestream 设置。
 
 ```yaml
 # litestream.yml
-access-key-id: ${MINIO_ACCESS_KEY_ID}  # 建议使用环境变量存储敏感信息
-secret-access-key: ${MINIO_SECRET_ACCESS_KEY}
+access-key-id: ${LITESTREAM_ACCESS_KEY_ID}  # 建议使用环境变量存储敏感信息
+secret-access-key: ${LITESTREAM_SECRET_ACCESS_KEY}
 
 dbs:
-  - path: /path/to/your/app-data.db # 此路径必须与您应用程序的数据库路径匹配
+  - path: ./app-data.db  # 数据库文件放在项目根目录
     replicas:
       - name: s3-main # 或任意名称
         type: s3
-        bucket: ${MINIO_BUCKET} # 例如, clojure-db-replica
-        path: ${MINIO_DB_PATH_IN_BUCKET} # 例如, sqlite-replicate_prod_db
-        endpoint: ${MINIO_ENDPOINT} # 例如, http://127.0.0.1:9000
+        bucket: ${LITESTREAM_BUCKET:-clojure-db-replica}  # 默认值为 clojure-db-replica
+        path: ${LITESTREAM_DB_PATH:-database}  # 默认值为 database
+        endpoint: ${LITESTREAM_ENDPOINT} # 例如, http://127.0.0.1:9000
         force-path-style: true # 通常对于 MinIO 设置为 true
         # 推荐设置，请根据需要调整
-        sync-interval: 1s       # Litestream v0.3.9+ 新增，检查变更的频率
-        snapshot-interval: 1h
-        retention: 24h
+        sync-interval: 1s       # 检查变更的频率
+        snapshot-interval: 1h   # 快照间隔
+        retention: 24h          # 保留时间
 ```
 **注意:** 强烈建议在 `litestream.yml` 中对敏感信息（如 access key 和 secret key）使用环境变量（如 `${...}` 所示），而不是硬编码。然后，您的应用程序将负责在运行 Litestream 命令之前设置这些环境变量。
 
@@ -166,13 +168,13 @@ Luminus 项目通常使用 `mount` 来管理应用程序状态和组件生命周
 在您的 `deps.edn` 文件中添加依赖：
 ```clojure
 ;; deps.edn
-net.clojars.zhaoyul/sqlite-replicate {:mvn/version "0.1.0-SNAPSHOT"} ; 请替换为最新版本
+net.clojars.zhaoyul/sqlite-replicate {:mvn/version "0.1.1-SNAPSHOT"} ; 请替换为最新版本
 ```
 
 如果您仍在使用 Leiningen (`project.clj`)：
 ```clojure
 ;; project.clj
-[net.clojars.zhaoyul/sqlite-replicate "0.1.0-SNAPSHOT"] ; 请替换为最新版本
+[net.clojars.zhaoyul/sqlite-replicate "0.1.1-SNAPSHOT"] ; 请替换为最新版本
 ```
 
 **2. 配置:**
@@ -317,7 +319,7 @@ clojure -T:build pom
 ```bash
 clojure -T:build jar
 ```
-此命令会将编译后的代码和源文件打包。JAR 文件将根据 `deps.edn` 中 `:pom-data` 的 `:lib` 和 `:version` 命名，并输出到 `target/` 目录，例如 `target/sqlite-replicate-0.1.0-SNAPSHOT.jar`。
+此命令会将编译后的代码和源文件打包。JAR 文件将根据 `deps.edn` 中 `:pom-data` 的 `:lib` 和 `:version` 命名，并输出到 `target/` 目录，例如 `target/sqlite-replicate-0.1.1-SNAPSHOT.jar`。
 
 生成的 JAR 文件位于 `target/` 目录下。
 
@@ -329,7 +331,7 @@ clojure -T:build jar
 
 **1. 确保版本号已更新:**
 
-在部署新版本之前，请务必更新 `deps.edn` 文件中 `:pom-data` 下的 `:version` 字段。例如，从 `"0.1.0-SNAPSHOT"` 更新到 `"0.1.0"` (或者其他非快照版本)。同时，您可能也需要更新 `build.clj` 中定义的 `version` 变量（如果它不是动态读取 `deps.edn` 的话 - 当前 `build.clj` 实现是动态读取的）。
+在部署新版本之前，请务必更新 `deps.edn` 文件中 `:pom-data` 下的 `:version` 字段。例如，从 `"0.1.1-SNAPSHOT"` 更新到 `"0.1.0"` (或者其他非快照版本)。同时，您可能也需要更新 `build.clj` 中定义的 `version` 变量（如果它不是动态读取 `deps.edn` 的话 - 当前 `build.clj` 实现是动态读取的）。
 
 **2. 生成最新的 `pom.xml` 和 JAR 文件:**
 

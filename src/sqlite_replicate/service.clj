@@ -5,12 +5,12 @@
 
 (defonce server (atom nil))
 (defonce writer (atom nil))
-(def default-port 3001)
+(def default-port 3011)
 
 (defn health-handler [_]
   {:status 200
-   :headers {"Content-Type" "application/json"}
-   :body "{\"status\":\"OK\",\"timestamp\":\"" (System/currentTimeMillis) "\"}"})
+   :headers {"Content-Type" "text/plain"}
+   :body "OK"})
 
 (defn start-server
   "启动健康检查HTTP服务器，可配置端口"
