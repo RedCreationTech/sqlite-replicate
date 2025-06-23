@@ -80,22 +80,26 @@ CREATE TABLE IF NOT EXISTS records (
         estimated-rows (max 1 (long (/ target-bytes row-size-bytes)))] ; 估算需要的行数
     (io/delete-file db-filename true) ; 如果文件已存在，则删除
     (create-test-table ds)
-    (timbre/info (format "正在填充数据库 %s 至约 %.2f MB..." db-filename target-size-mb))
+    (timbre/info (format "开始填充数据库 %s 至约 %.2f MB (目标字节: %d)..." db-filename target-size-mb target-bytes))
     (loop [inserted-count 0
-           current-size-bytes 0]
+           current-size-bytes (.length (io/file db-filename)) ; 获取初始文件大小
+           last-reported-count 0]
+      (when (or (= inserted-count 0) (>= (- inserted-count last-reported-count) 100) (>= current-size-bytes target-bytes))
+        (timbre/debug (format "填充进度: %s, 行数: %d, 当前大小: %.4f MB (字节: %d)"
+                              db-filename inserted-count (get-file-size-mb db-filename) current-size-bytes))
+        (flush))
+
       (if (or (>= current-size-bytes target-bytes)
-              (>= inserted-count (* estimated-rows 1.5))) ; 安全中止条件，防止无限循环，可调整乘数
+              (>= inserted-count (* estimated-rows 2.0))) ; 增加安全中止条件的乘数，允许更多行数尝试达到大小
         (do
-          (let [final-size (get-file-size-mb db-filename)]
-            (timbre/info (format "数据库 %s 填充完成。目标大小: %.2f MB, 实际大小: %.2f MB, 总行数: %d"
-                                 db-filename target-size-mb (or final-size 0) inserted-count))
-            final-size))
+          (let [final-size-mb (get-file-size-mb db-filename)]
+            (timbre/info (format "数据库 %s 填充完成。目标大小: %.2f MB, 实际大小: %.4f MB, 总行数: %d"
+                                 db-filename target-size-mb (or final-size-mb 0) inserted-count))
+            final-size-mb))
         (let [text-data (generate-json-like-string (+ 5 (rand-int 10)))] ; 生成不同复杂度的文本数据
           (sql/insert! ds :records {:data text-data :created_at (get-current-timestamp-for-db)})
-          (if (= (mod (inc inserted-count) 1000) 0) ; 每插入1000行检查一次文件大小
-            (let [new-size-bytes (.length (io/file db-filename))]
-              (recur (inc inserted-count) new-size-bytes))
-            (recur (inc inserted-count) current-size-bytes)))))))
+          (let [new-size-bytes (.length (io/file db-filename))]
+             (recur (inc inserted-count) new-size-bytes (if (>= (- inserted-count last-reported-count) 100) inserted-count last-reported-count))))))))
 
 
 (defn clear-db-file
@@ -103,6 +107,19 @@ CREATE TABLE IF NOT EXISTS records (
   [db-filename]
   (timbre/info (str "正在删除数据库文件: " db-filename))
   (io/delete-file db-filename true))
+
+(defn clear-db-files-by-prefix
+  "删除当前目录下所有以指定前缀开头的文件。"
+  [filename-prefix]
+  (timbre/info (str "正在按前缀删除数据库文件: " filename-prefix "*"))
+  (let [current-dir (io/file ".") ; 或者使用更明确的路径如果需要
+        files-to-delete (filter #(and (.isFile %) (str/starts-with? (.getName %) filename-prefix))
+                                (.listFiles current-dir))]
+    (if (seq files-to-delete)
+      (doseq [f files-to-delete]
+        (timbre/debug (str "删除文件: " (.getPath f)))
+        (io/delete-file f true))
+      (timbre/info (str "没有找到以 '" filename-prefix "' 开头的文件进行删除。")))))
 
 (defn execute-shell-command
   "执行 shell 命令并返回结果 map，包含 :out, :err, :exit。"
