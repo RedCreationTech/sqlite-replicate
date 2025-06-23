@@ -31,7 +31,7 @@
   {:dbtype "sqlite"
    :dbname db-filename})
 
-(defn- get-current-timestamp-for-db
+(defn get-current-timestamp-for-db
   "获取当前时间戳，用于数据库记录。"
   []
   (-> (t/now) tc/to-timestamp))
