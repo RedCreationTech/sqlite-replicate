@@ -517,3 +517,95 @@ clojure -M:standby
 ---
 通过以上步骤即可在本地搭建一个基于 SQLite 的可靠备份方案，既适用于开发环境，也可
 用于小规模生产场景。
+
+## Litestream 性能测试
+
+本项目包含一套用于评估 Litestream 在不同数据库大小和写入频率下备份与恢复性能的测试。这些测试使用 Clojure 编写，并依赖本地 MinIO 服务器作为 S3 兼容的存储后端。
+
+### 环境准备
+
+在运行性能测试之前，请确保您的开发环境满足以下要求：
+
+1.  **Java Development Kit (JDK):** 版本 8 或更高。
+2.  **Clojure CLI:** 确保 `clojure` 命令在您的系统 PATH 中可用。您可以从 [Clojure官网](https://clojure.org/guides/getting_started) 获取安装指南。
+3.  **Litestream CLI:** 确保 `litestream` 命令在您的系统 PATH 中可用。您可以从 [Litestream官网](https://litestream.io/install/) 下载并安装。
+4.  **MinIO Client (mc):** 确保 `mc` 命令在您的系统 PATH 中可用。您可以从 [MinIO官网](https://min.io/docs/minio/linux/reference/minio-mc.html#quickstart) 下载并安装。
+5.  **本地 MinIO 服务器:**
+    *   测试脚本期望 MinIO 服务器运行在 `http://127.0.0.1:9000`。
+    *   Access Key 应为 `minioadmin`，Secret Key 应为 `minioadmin`。
+    *   您可以使用 Docker 快速启动一个符合要求的 MinIO 实例：
+        ```bash
+        docker run -d -p 9000:9000 --name minio-server-for-testing \
+          -e "MINIO_ROOT_USER=minioadmin" \
+          -e "MINIO_ROOT_PASSWORD=minioadmin" \
+          minio/minio server /data --console-address ":9001"
+        ```
+        *(请确保 Docker 环境已正确安装并运行，且您有权限运行 Docker 命令。)*
+    *   配置 `mc` 客户端连接到此本地 MinIO 服务器：
+        ```bash
+        mc alias set myminio http://127.0.0.1:9000 minioadmin minioadmin
+        ```
+    *   创建一个名为 `clojure-db-replica` 的存储桶（如果测试脚本中的 `utils/clear-minio-bucket-path` 无法自动创建或清空）：
+        ```bash
+        mc mb myminio/clojure-db-replica
+        ```
+6.  **`litestream.yml` 配置文件:**
+    *   项目根目录下需要有一个 `litestream.yml` 文件。测试脚本依赖此文件进行 Litestream 操作。
+    *   确保此文件中的 `dbs[0].path` 设置为 `./app-data.db`。
+    *   MinIO 相关的配置（`access-key-id`, `secret-access-key`, `bucket`, `path`, `endpoint`）应与上述 MinIO 服务器设置匹配。
+    *   为加速测试，建议使用较短的同步和保留间隔，例如：
+        ```yaml
+        # litestream.yml (测试用配置示例)
+        access-key-id: minioadmin
+        secret-access-key: minioadmin
+        dbs:
+          - path: ./app-data.db
+            replicas:
+              - name: s3-main
+                type: s3
+                bucket: clojure-db-replica
+                path: database
+                endpoint: http://127.0.0.1:9000
+                force-path-style: true
+                sync-interval: 1s
+                snapshot-interval: 10s
+                retention: 5m
+                validation-interval: 15s
+        ```
+
+### 下载依赖
+
+在项目根目录下，运行以下命令以下载所有在 `deps.edn` 中定义的项目和测试依赖：
+
+```bash
+clojure -P
+```
+*(或者，如果您的项目主要使用 Leiningen 并且 `deps.edn` 与其兼容，可以使用 `lein deps`)*
+
+### 运行测试
+
+您可以使用 Clojure CLI 通过 `:test` 别名来运行性能测试。此别名通常配置在 `deps.edn` 文件中，并会调用项目配置的测试运行器（例如，`deps.edn` 中 `:test` alias 下的 `:main-opts ["-m" "runner"]`）。
+
+在项目根目录下运行：
+
+```bash
+clojure -X:test
+```
+*(如果您的项目使用特定的测试运行器脚本或不同的命令，请相应调整。)*
+
+### 解读测试输出
+
+测试脚本会使用 `timbre` 日志库将详细信息输出到控制台。请关注以下关键信息：
+
+*   **测试场景:** 日志会标明当前正在执行的测试场景（例如，静态数据库大小测试，或动态写入频率测试）。
+*   **数据库操作:** 数据库的创建、填充大小等信息。
+*   **Litestream 命令:** 执行的 `litestream replicate` 和 `litestream restore` 命令。
+*   **耗时统计:**
+    *   对于静态数据库场景，会记录每个数据库大小下的 Litestream 备份（通过 `replicate` 后等待同步完成衡量）和恢复操作的耗时（毫秒）。
+    *   对于动态写入场景，会记录在特定写入频率下，从 Litestream 恢复数据库的耗时。
+*   **数据验证:**
+    *   静态场景下，会比较恢复后的数据库文件大小与原始大小是否接近。
+    *   动态场景下，会比较恢复后的数据库中的记录行数是否与预期（初始行数 + 写入行数）一致。
+*   **错误信息:** 任何在测试过程中发生的错误或断言失败都会被记录。
+
+通过分析这些输出，您可以评估 Litestream 在不同条件下的性能表现。
