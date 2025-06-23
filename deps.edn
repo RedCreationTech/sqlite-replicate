@@ -5,7 +5,11 @@
         http-kit/http-kit {:mvn/version "2.7.0"}
         org.clojure/tools.logging {:mvn/version "1.2.4"}
         org.slf4j/slf4j-api {:mvn/version "2.0.9"}
-        org.slf4j/slf4j-simple {:mvn/version "2.0.9"}}
+        org.slf4j/slf4j-simple {:mvn/version "2.0.9"}
+        ;; Moved from :test alias for CIDER REPL compatibility
+        clj-time/clj-time {:mvn/version "0.15.2"}
+        cheshire/cheshire {:mvn/version "5.13.0"}
+        com.taoensso/timbre {:mvn/version "6.0.1"}}
  :aliases {:run {:main-opts ["-m" "sqlite-replicate.db"]}
            :service {:main-opts ["-m" "sqlite-replicate.service"]}
            :standby {:main-opts ["-m" "sqlite-replicate.standby"]}
@@ -13,11 +17,8 @@
                   :extra-deps {org.clojure/clojure {:mvn/version "1.12.0"}
                                org.clojure/test.check {:mvn/version "1.1.1"}
                                clj-http-lite/clj-http-lite {:mvn/version "0.3.0"}
-                               org.clojure/data.json {:mvn/version "2.5.0"}
-                               ;; Added for litestream performance testing
-                               clj-time/clj-time {:mvn/version "0.15.2"}
-                               cheshire/cheshire {:mvn/version "5.13.0"}
-                               com.taoensso/timbre {:mvn/version "6.0.1"}}
+                               org.clojure/data.json {:mvn/version "2.5.0"}}
+                               ;; clj-time, cheshire, timbre moved to top-level :deps
                   :main-opts ["-m" "runner"]}
            :deploy {:extra-deps {slipset/deps-deploy {:mvn/version "0.2.0"}}
                     :exec-fn deps-deploy.deps-deploy/deploy
