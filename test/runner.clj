@@ -2,7 +2,8 @@
   (:require [clojure.test :as test]
             sqlite-replicate.db-test
             sqlite-replicate.service-test
-            sqlite-replicate.standby-test))
+            sqlite-replicate.standby-test
+            sqlite-replicate.litestream-performance-test)) ; Added new performance test namespace
 
 (defn -main [& args]
   (println "Running tests via test runner...")
