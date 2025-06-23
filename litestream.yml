@@ -13,6 +13,7 @@ dbs:
         endpoint: http://127.0.0.1:9000 # MinIO服务器API地址
         force-path-style: true  # 通常对于MinIO设置为true
         # 推荐设置，请根据需要调整
-        sync-interval: 1s       # 检查变更的频率
-        snapshot-interval: 1h   # 快照间隔
-        retention: 24h          # 保留时间
+        sync-interval: 1s              # Litestream 检查数据库文件变更的频率
+        snapshot-interval: 10s         # 创建完整快照的频率 (调低以便测试)
+        retention: 5m                  # 备份保留时长 (调短以便测试)
+        validation-interval: 15s 
