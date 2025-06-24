@@ -103,10 +103,21 @@ CREATE TABLE IF NOT EXISTS records (
 
 
 (defn clear-db-file
-  "删除指定的数据库文件。"
+  "删除指定的数据库文件及其关联的 WAL 文件 (-shm, -wal)。"
   [db-filename]
-  (timbre/info (str "正在删除数据库文件: " db-filename))
-  (io/delete-file db-filename true))
+  (timbre/info (str "正在删除数据库文件及其 WAL 文件: " db-filename))
+  (let [db-file (io/file db-filename)
+        wal-file (io/file (str db-filename "-wal"))
+        shm-file (io/file (str db-filename "-shm"))]
+    (when (.exists db-file)
+      (timbre/debug (str "删除主数据库文件: " (.getAbsolutePath db-file)))
+      (io/delete-file db-file true))
+    (when (.exists wal-file)
+      (timbre/debug (str "删除 WAL 文件: " (.getAbsolutePath wal-file)))
+      (io/delete-file wal-file true))
+    (when (.exists shm-file)
+      (timbre/debug (str "删除 SHM 文件: " (.getAbsolutePath shm-file)))
+      (io/delete-file shm-file true))))
 
 (defn clear-db-files-by-prefix
   "删除当前目录下所有以指定前缀开头的文件。"
